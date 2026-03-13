@@ -25,6 +25,25 @@ function headers(token) {
 export const STAGES = ["Backlog", "Develop", "Review", "Test", "Staging", "Done"];
 export const PRIORITIES = ["Show-stopper", "Critical", "Major", "Normal", "Minor"];
 
+// Map common AI-generated priority names to valid Bitacora values
+const PRIORITY_MAP = {
+  "show-stopper": "Show-stopper",
+  "showstopper": "Show-stopper",
+  "critical": "Critical",
+  "major": "Major",
+  "high": "Major",
+  "normal": "Normal",
+  "medium": "Normal",
+  "minor": "Minor",
+  "low": "Minor",
+};
+
+function sanitizePriority(value) {
+  if (!value) return "Normal";
+  if (PRIORITIES.includes(value)) return value;
+  return PRIORITY_MAP[value.toLowerCase()] || "Normal";
+}
+
 // ─── Issues — List ───────────────────────────────────────────────
 
 export async function fetchIssues(token, { query = "", skip = 0, top = 50 } = {}) {
@@ -78,7 +97,7 @@ export async function createIssue(token, { summary, description, priority }) {
       {
         name: "Priority",
         $type: "SingleEnumIssueCustomField",
-        value: { name: priority || "Normal" },
+        value: { name: sanitizePriority(priority) },
       },
     ],
   };
