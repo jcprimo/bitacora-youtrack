@@ -15,6 +15,12 @@ export default defineConfig(({ mode }) => {
           rewrite: (path) => path.replace(/^\/yt-api/, '/api'),
           secure: true,
         },
+        '/openai-api': {
+          target: 'https://api.openai.com',
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/openai-api/, ''),
+          secure: true,
+        },
       },
     },
   }

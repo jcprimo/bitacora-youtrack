@@ -1,3 +1,4 @@
+/* ─── Dark mode (default) ──────────────────────────────────────── */
 :root {
   --bg-primary: #06060b;
   --bg-card: #0c0c16;
@@ -20,12 +21,41 @@
   --radius-xl: 18px;
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.4);
+  --step-bar-bg: rgba(6, 6, 11, 0.5);
+  --toggle-bg: var(--bg-elevated);
+  --toggle-border: var(--border-medium);
+  --toggle-color: var(--text-secondary);
+}
+
+/* ─── Light mode ───────────────────────────────────────────────── */
+[data-theme="light"] {
+  --bg-primary: #f5f5fa;
+  --bg-card: #ffffff;
+  --bg-input: #f0f0f6;
+  --bg-elevated: #e8e8f0;
+  --border-subtle: #d8d8e4;
+  --border-medium: #c0c0d4;
+  --text-primary: #1a1a2e;
+  --text-secondary: #4a4a6a;
+  --text-muted: #7a7a9a;
+  --text-dim: #a0a0b8;
+  --accent-indigo: #6350e0;
+  --accent-green: #16a36a;
+  --accent-red: #dc3545;
+  --accent-amber: #d97706;
+  --accent-cyan: #0891b2;
+  --shadow-card: 0 1px 4px rgba(0,0,0,0.08);
+  --step-bar-bg: rgba(240, 240, 250, 0.7);
+  --toggle-bg: var(--bg-card);
+  --toggle-border: var(--border-medium);
+  --toggle-color: var(--text-secondary);
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 html {
-  font-size: 16px;
+  font-size: 18px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -35,6 +65,7 @@ body {
   background: var(--bg-primary);
   color: var(--text-primary);
   min-height: 100vh;
+  transition: background 0.3s ease, color 0.3s ease;
 }
 
 #root { min-height: 100vh; }
