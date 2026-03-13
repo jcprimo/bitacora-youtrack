@@ -22,12 +22,15 @@ const renderer = new marked.Renderer();
 
 // Headings get id anchors for in-page navigation
 renderer.heading = function ({ text, depth }) {
-  const slug = text.toLowerCase().replace(/[^\w]+/g, "-").replace(/(^-|-$)/g, "");
-  return `<h${depth} id="${slug}" class="md-heading md-h${depth}">${text}</h${depth}>`;
+  // text may be a string or contain nested tokens — flatten to string
+  const plain = typeof text === "string" ? text : String(text);
+  const slug = plain.toLowerCase().replace(/[^\w]+/g, "-").replace(/(^-|-$)/g, "");
+  return `<h${depth} id="${slug}" class="md-heading md-h${depth}">${plain}</h${depth}>`;
 };
 
 // Links open in new tab if external
-renderer.link = function ({ href, title, text }) {
+renderer.link = function ({ href, title, tokens }) {
+  const text = this.parser.parseInline(tokens);
   const isExternal = href && (href.startsWith("http://") || href.startsWith("https://"));
   const attrs = isExternal ? ' target="_blank" rel="noopener noreferrer"' : "";
   const titleAttr = title ? ` title="${title}"` : "";
@@ -47,9 +50,30 @@ renderer.codespan = function ({ text }) {
   return `<code class="md-inline-code">${text}</code>`;
 };
 
-// Tables get a wrapper for horizontal scroll
-renderer.table = function ({ header, body }) {
-  return `<div class="md-table-wrap"><table class="md-table"><thead>${header}</thead><tbody>${body}</tbody></table></div>`;
+// Table: header and rows are arrays of token objects — iterate them
+renderer.table = function (token) {
+  // Render header row
+  let headerHtml = "<tr>";
+  for (const cell of token.header) {
+    const align = cell.align ? ` style="text-align:${cell.align}"` : "";
+    const content = this.parser.parseInline(cell.tokens);
+    headerHtml += `<th${align}>${content}</th>`;
+  }
+  headerHtml += "</tr>";
+
+  // Render body rows
+  let bodyHtml = "";
+  for (const row of token.rows) {
+    bodyHtml += "<tr>";
+    for (const cell of row) {
+      const align = cell.align ? ` style="text-align:${cell.align}"` : "";
+      const content = this.parser.parseInline(cell.tokens);
+      bodyHtml += `<td${align}>${content}</td>`;
+    }
+    bodyHtml += "</tr>";
+  }
+
+  return `<div class="md-table-wrap"><table class="md-table"><thead>${headerHtml}</thead><tbody>${bodyHtml}</tbody></table></div>`;
 };
 
 // Images get responsive styling
