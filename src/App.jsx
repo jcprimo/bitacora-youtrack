@@ -232,6 +232,7 @@ export default function App() {
           importFile={md.importFile}
           importFiles={md.importFiles}
           removeFile={md.removeFile}
+          contentLoading={md.contentLoading}
         />
       )}
 

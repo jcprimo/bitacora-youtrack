@@ -1,19 +1,40 @@
 // ─── views/MarkdownView.jsx — Markdown Reader ───────────────────
 // Two-panel layout: file list sidebar + rendered Markdown content.
-// Supports drag-and-drop, file upload, and persists files in
-// localStorage. Re-importing the same filename updates its content
-// for live-update workflows (edit in editor → drag back in).
+// Content is lazy-loaded per file. A loading overlay displays while
+// the file is being read from storage and parsed.
 
-import { useRef, useState, useCallback, useMemo } from "react";
+import { useRef, useState, useCallback, useMemo, useEffect } from "react";
 import { renderMarkdown } from "../utils/markdownParser";
 
 export default function MarkdownView({
   files, activeFile, activeFileId, setActiveFileId,
-  importFile, importFiles, removeFile,
+  importFile, importFiles, removeFile, contentLoading,
 }) {
   const fileInputRef = useRef(null);
   const [dragging, setDragging] = useState(false);
   const dragCounter = useRef(0);
+
+  // Deferred markdown rendering — parse off the main paint
+  const [renderedHtml, setRenderedHtml] = useState("");
+  const [rendering, setRendering] = useState(false);
+
+  const activeContent = activeFile?.content ?? "";
+
+  useEffect(() => {
+    if (!activeContent) {
+      setRenderedHtml("");
+      setRendering(false);
+      return;
+    }
+    setRendering(true);
+    const raf = requestAnimationFrame(() => {
+      setRenderedHtml(renderMarkdown(activeContent));
+      setRendering(false);
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [activeContent]);
+
+  const isLoading = contentLoading || rendering;
 
   const handleFileSelect = (e) => {
     const selected = e.target.files;
@@ -48,13 +69,6 @@ export default function MarkdownView({
     onDragEnter: handleDragEnter,
     onDragLeave: handleDragLeave,
   };
-
-  // Memoize rendered HTML — key on content + id, not object reference
-  const activeContent = activeFile?.content ?? "";
-  const renderedHtml = useMemo(
-    () => activeContent ? renderMarkdown(activeContent) : "",
-    [activeContent]
-  );
 
   // Hidden file input (shared)
   const fileInput = (
@@ -158,7 +172,14 @@ export default function MarkdownView({
 
       {/* Reader — rendered Markdown */}
       <main className="md-reader">
-        {activeFile ? (
+        {isLoading ? (
+          <div className="md-loading-overlay">
+            <div className="md-loading-modal">
+              <div className="md-loading-spinner" />
+              <span className="md-loading-text">Rendering document...</span>
+            </div>
+          </div>
+        ) : activeFile ? (
           <>
             <div className="md-reader-header">
               <span className="md-reader-filename">{activeFile.name}</span>

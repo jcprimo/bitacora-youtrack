@@ -1455,6 +1455,44 @@
   color: var(--text-dim);
 }
 
+/* ─── Loading Overlay ─────────────────────────────────────────── */
+.md-loading-overlay {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 300px;
+}
+
+.md-loading-modal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 2rem 2.5rem;
+  background: var(--bg-card);
+  border: 1px solid var(--md-accent-border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+  animation: fadeIn 0.2s ease-out;
+}
+
+.md-loading-spinner {
+  width: 28px;
+  height: 28px;
+  border: 2.5px solid var(--border-medium);
+  border-top-color: var(--md-accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+.md-loading-text {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  letter-spacing: 0.02em;
+}
+
 /* ─── Rendered Markdown Content ───────────────────────────────── */
 .md-content {
   padding: 1.5rem 2rem 2rem;
