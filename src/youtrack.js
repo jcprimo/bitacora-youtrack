@@ -14,11 +14,14 @@ export const config = {
 function headers(token) {
   // When using the Express proxy, the server injects the Authorization header.
   // We still send it for Vite dev mode where there's no server-side injection.
+  // "server-managed" is a placeholder — don't send it as a Bearer token.
   const h = {
     "Content-Type": "application/json",
     Accept: "application/json",
   };
-  if (token) h.Authorization = `Bearer ${token}`;
+  if (token && token !== "server-managed") {
+    h.Authorization = `Bearer ${token}`;
+  }
   return h;
 }
 

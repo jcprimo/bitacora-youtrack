@@ -84,8 +84,14 @@ export default function App() {
 // Separated to keep hook calls unconditional within this component.
 // ═══════════════════════════════════════════════════════════════════
 function Dashboard({ auth, theme, toggleTheme }) {
-  // YouTrack auth — persisted in localStorage, falls back to env var
-  const [token, setToken] = useState(localStorage.getItem("bitacora-yt-token") || import.meta.env.VITE_YT_TOKEN || "");
+  // YouTrack auth — in Express proxy mode, credentials are server-side.
+  // We use "server-managed" as a truthy placeholder so the UI knows a token
+  // may exist. In dev mode, falls back to localStorage / env var.
+  const isExpressProxy = window.location.port !== "5173";
+  const [token, setToken] = useState(() => {
+    if (isExpressProxy) return "server-managed";
+    return localStorage.getItem("bitacora-yt-token") || import.meta.env.VITE_YT_TOKEN || "";
+  });
   // Active tab: "board" | "create" | "usage" | "detail"
   const [view, setView] = useState("board");
 
