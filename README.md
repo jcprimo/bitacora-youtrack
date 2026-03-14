@@ -1,139 +1,185 @@
-# Bitacora YouTrack Integration
+# Bitacora App Dashboard
 
-A purpose-built YouTrack integration tool for **Bitacora**, a bilingual (EN/ES) iOS app for student behavioral incident reporting in US and Mexico schools.
+A full-stack operations dashboard for **Bitacora**, a bilingual (EN/ES) iOS app for student behavioral incident reporting in US and Mexico schools.
 
-Manage YouTrack tickets through an agent-based workflow with AI-assisted or template-based generation, inline stage/priority updates, real-time AI spend tracking, and dual FERPA + LFPDPPP compliance awareness.
+Manage YouTrack tickets through an agent-based workflow, track AI spend across Anthropic and OpenAI, import QA test cases, and read Markdown docs — all behind session-based authentication with encrypted credential storage.
 
 ## Features
 
+### Authentication & Security
+- **Session-based auth** — login, self-signup for engineers, first-run admin setup
+- **Encrypted credentials** — API keys stored with AES-256-GCM, proxied server-side (never reach the browser)
+- **Rate limiting** — brute-force protection on login and registration endpoints
+- **Pre-commit secret scanning** — prevents accidental credential commits
+
 ### Ticket Management
-- **Full CRUD** — Create, read, update, and delete YouTrack tickets from a single board view
-- **Inline Stage & Priority** — Update ticket workflow (Backlog → Develop → Review → Test → Staging → Done) and priority directly from the board
-- **Copy JSON** — Export any ticket as JSON for agent handoff
+- **Full CRUD** — create, read, update, and delete YouTrack tickets from a single board view
+- **Inline Stage & Priority** — update ticket workflow (Backlog → Develop → Review → Test → Staging → Done) directly from the board
+- **Ticket detail view** — editable summary/description, comment thread synced with YouTrack
+- **Copy JSON** — export any ticket as JSON for agent handoff
 
 ### AI-Powered Generation
 - **AI Generate** — Claude-powered ticket creation with structured output (summary, description, compliance flags, effort estimate)
-- **Template Generate** — Structured ticket templates per agent — no API key required
-- **8 Specialized Agents** — PM, iOS Sr. Developer, UX/UI, QA, Data, Security, GTM, Customer Success — each with tailored system prompts and templates
-- **Smart Priority Mapping** — AI-generated values like "High" or "Medium" are automatically mapped to valid Bitacora priorities
+- **Template Generate** — structured ticket templates per agent — no API key required
+- **8 Specialized Agents** — PM, iOS Sr. Developer, UX/UI, QA, Data, Security, GTM, Customer Success
+- **Smart Priority Mapping** — AI-generated values like "High" automatically mapped to valid Bitacora priorities
+
+### QA Test Case Tracker
+- **CSV import** — drag-and-drop or file picker, persisted in SQLite
+- **Filterable table** — pill/chip filters by category, priority, status
+- **Ticket integration** — create YouTrack bugs from test cases, track ticket state per row
+- **Context bundles** — one-click clipboard handoff of scoped agent prompts
+
+### Markdown Reader
+- **Two-panel viewer** — file sidebar + rendered content with custom heading anchors, tables, task lists, code blocks
+- **Multi-file support** — import multiple .md files, persisted across sessions
 
 ### AI Usage & Cost Tracking
-- **Credit Balance Card** — Set your Anthropic balance and watch remaining credits in real-time
-- **Per-Request Tracking** — Every AI Generate call logs input/output tokens and cost
-- **Budget Alerts** — Set a monthly spend limit with visual progress bar (green → amber → red)
-- **Request History** — Full table with timestamp, agent, tokens, and cost per request
-- **OpenAI Integration** — Optional OpenAI costs/usage tracking via Admin API for cross-platform spend visibility
+- **Anthropic** — credit balance card, per-request token/cost tracking, budget alerts
+- **OpenAI** — costs API integration via Admin key, model breakdown, daily usage charts
+- **Combined dashboard** — cross-platform spend visibility
 
-### Compliance & UX
-- **Dual Compliance** — FERPA (US) and LFPDPPP (Mexico) risk flagging built into every agent prompt
-- **Compliance Tooltips** — Hover over FERPA/LFPDPPP badges for full descriptions and official links
-- **Light / Dark Mode** — Toggle with theme persistence
-- **Runtime Settings** — Update YouTrack token and Anthropic API key from the UI without restarting
-- **Token Estimates** — See estimated token usage and cost before generating
+### UI
+- **Cosmic glass-morphism** — translucent cards with backdrop blur, nebula background
+- **Light / Dark mode** — lavender-slate light theme, cosmic dark theme
+- **Responsive design** — optimized for iPhone 16 (393px) through desktop
+- **FERPA / LFPDPPP compliance badges** — hover tooltips with official documentation links
 
 ## Quick Start
 
+### Development (Vite dev server)
+
 ```bash
-# 1. Clone
 git clone https://github.com/jcprimo/bitacora-youtrack.git
 cd bitacora-youtrack
 
-# 2. Configure
 cp .env.example .env
-# Edit .env with your YouTrack token and (optionally) Anthropic API key
+# Edit .env — set ENCRYPTION_KEY (run: openssl rand -hex 32)
 
-# 3. Install & run
 npm install
 npm run dev
+# → http://localhost:5173 (frontend only, no auth)
 ```
 
-Open [http://localhost:5173](http://localhost:5173).
+### Production (Express + SQLite)
+
+```bash
+cp .env.example .env
+# Set SESSION_SECRET and ENCRYPTION_KEY in .env
+
+npm install
+npm run build
+npm start
+# → http://localhost:8080 (full stack with auth)
+```
+
+### Docker Compose (recommended for deploy)
+
+```bash
+cp .env.example .env
+# Set SESSION_SECRET and ENCRYPTION_KEY
+
+docker compose up -d --build
+# → http://localhost:8080
+```
 
 ## Environment Variables
 
 | Variable | Required | Description |
-|---|---|---|
-| `VITE_YT_URL` | Yes | YouTrack instance URL (e.g. `https://your-instance.youtrack.cloud`) |
-| `VITE_YT_TOKEN` | Yes | YouTrack permanent token ([how to generate](https://www.jetbrains.com/help/youtrack/server/Manage-Permanent-Token.html)) |
-| `VITE_YT_PROJECT_ID` | Yes | YouTrack project ID (e.g. `0-1`) |
-| `VITE_ANTHROPIC_KEY` | No | Anthropic API key for AI-assisted ticket generation |
-| `VITE_OPENAI_KEY` | No | OpenAI Admin API key (`sk-admin-*`) for usage/cost tracking |
+|----------|----------|-------------|
+| `SESSION_SECRET` | Yes (prod) | Random string for signing session cookies |
+| `ENCRYPTION_KEY` | Yes (prod) | 64-char hex string for AES-256-GCM credential encryption |
+| `YOUTRACK_URL` | No | YouTrack instance URL (default: `https://bitacora.youtrack.cloud`) |
+| `PORT` | No | Server port (default: `8080`) |
 
-Credentials can also be set at runtime via the **BIT Connected** badge in the header — no restart required.
-
-## Docker
-
+Generate secrets:
 ```bash
-# Build
-docker build -t bitacora-youtrack .
-
-# Run
-docker run -p 8080:8080 \
-  -e YOUTRACK_URL=https://your-instance.youtrack.cloud \
-  bitacora-youtrack
+openssl rand -base64 32   # SESSION_SECRET
+openssl rand -hex 32      # ENCRYPTION_KEY
 ```
 
-Open [http://localhost:8080](http://localhost:8080).
-
-The Docker image uses a multi-stage build (Node 22 → nginx Alpine) and proxies `/yt-api` and `/openai-api` through nginx so the browser never hits CORS.
+API keys (YouTrack, Anthropic, OpenAI) are configured in the dashboard UI after login — not in environment variables.
 
 ## Project Structure
 
 ```
-src/
-├── App.jsx                        # App shell — hooks, nav, view router (~210 lines)
-├── App.css                        # Component styles (light + dark mode)
-├── index.css                      # CSS variables, theme definitions, animations
-├── main.jsx                       # React entry point
-│
-├── constants/
-│   ├── agents.js                  # 8-agent team definitions (id, icon, color, priority)
-│   ├── prompts.js                 # System prompts, placeholders, Markdown templates
-│   └── pricing.js                 # Token estimation & cost calculation helpers
-│
+server/                            # Express backend
+├── index.js                       # Entry point, migrations, route mounting
+├── db.js                          # SQLite connection (WAL mode, foreign keys)
+├── schema.js                      # Drizzle ORM schema (7 tables)
+├── middleware/
+│   ├── auth.js                    # Session auth guards (requireAuth, requireAdmin)
+│   ├── encrypt.js                 # AES-256-GCM encrypt/decrypt for credentials
+│   └── rateLimiter.js             # In-memory sliding-window rate limiter
+└── routes/
+    ├── auth.js                    # Login, logout, register, setup-status
+    ├── credentials.js             # Encrypted token CRUD + getUserToken()
+    ├── documents.js               # Markdown document CRUD
+    ├── usage.js                   # AI usage tracking + aggregates
+    ├── qa.js                      # QA test case import/CRUD
+    └── proxy.js                   # Server-side proxy (YouTrack, OpenAI, Anthropic)
+
+src/                               # React frontend
+├── App.jsx                        # Auth gate + Dashboard shell
+├── App.css                        # Component styles (login, layout, responsive)
+├── index.css                      # CSS variables, themes, animations
 ├── hooks/
-│   ├── useToast.js                # Toast notification state (auto-dismiss 3.5s)
-│   ├── useTheme.js                # Light/dark mode with localStorage persistence
-│   ├── useSettings.js             # Runtime credential management (modal state)
+│   ├── useAuth.js                 # Session lifecycle (login, logout, register)
 │   ├── useBoard.js                # Issue list fetching & filtering
-│   ├── useCreateTicket.js         # 3-step creation: AI Generate / Template / Manual
-│   ├── useIssueDetail.js          # Issue editing, inline field updates, delete
-│   ├── useAnthropicUsage.js       # Client-side Anthropic spend tracker (localStorage)
-│   └── useOpenAIUsage.js          # OpenAI Costs API integration (Admin key required)
-│
+│   ├── useCreateTicket.js         # 3-step creation: AI / Template / Manual
+│   ├── useIssueDetail.js          # Issue editing, comments, delete
+│   ├── useQATracker.js            # CSV import, filtering, ticket CRUD
+│   ├── useMarkdownReader.js       # MD file import, lazy content loading
+│   ├── useAnthropicUsage.js       # Anthropic spend tracking
+│   ├── useOpenAIUsage.js          # OpenAI costs API integration
+│   ├── useSettings.js             # Runtime credential management
+│   ├── useTheme.js                # Light/dark mode toggle
+│   └── useToast.js                # Toast notifications
 ├── views/
-│   ├── BoardView.jsx              # Issue list with filter bar & inline stage updates
-│   ├── CreateView.jsx             # Agent sidebar + 3-step wizard (Input → Review → Done)
-│   ├── UsageView.jsx              # AI spend dashboard (Anthropic + OpenAI tabs)
-│   └── DetailView.jsx             # Single issue editor with delete confirmation
-│
+│   ├── LoginView.jsx              # Login, signup, first-run admin setup
+│   ├── BoardView.jsx              # Issue list with filter & inline updates
+│   ├── CreateView.jsx             # Agent sidebar + 3-step wizard
+│   ├── DetailView.jsx             # Issue editor + comment thread
+│   ├── QATrackerView.jsx          # QA test case table
+│   ├── MarkdownView.jsx           # Two-panel markdown reader
+│   └── UsageView.jsx              # AI spend dashboard
 ├── components/
-│   ├── Toast.jsx                  # Fixed-position notification banner
-│   ├── Header.jsx                 # App title, compliance badges, connection status
-│   └── SettingsModal.jsx          # Overlay for editing credentials at runtime
-│
-├── youtrack.js                    # YouTrack REST API service (CRUD, custom fields)
-├── openai.js                      # OpenAI Costs & Usage API service
-├── youtrack.test.js               # Unit tests (node:test)
-└── youtrack.e2e.test.js           # E2E tests (against real YouTrack)
+│   ├── Header.jsx                 # Title, badges, user menu, theme toggle
+│   ├── SettingsModal.jsx          # Credential editor with show/hide toggle
+│   └── Toast.jsx                  # Notification banner
+├── youtrack.js                    # YouTrack REST API service
+└── openai.js                      # OpenAI Costs API service
 
-public/
-└── favicon.svg
+scripts/
+├── run-bitacora.sh                # First-time deploy (preflight checks + build)
+├── restart-bitacora.sh            # Quick redeploy (pull + rebuild)
+└── scan-secrets.sh                # Pre-commit secret detection
 
-Dockerfile                         # Multi-stage build (Node 22 → nginx Alpine)
-nginx.conf                         # Production reverse proxy (/yt-api, /openai-api)
-vite.config.js                     # Dev server + API proxy config
-.env.example                       # Template for environment variables
-package.json
+data/                              # SQLite database (gitignored, Docker volume)
+docker-compose.yml                 # App + persistent data volume
+Dockerfile                         # Multi-stage: Node 22 build → Node 22 runtime
+drizzle.config.js                  # Drizzle Kit migration config
 ```
 
-### Architecture Notes
+## Architecture
 
-- **App.jsx** is a thin shell (~210 lines) — all business logic lives in custom hooks, all UI lives in views/components.
-- **State ownership**: each hook owns its slice of state. App.jsx composes them and passes data down via props. No context providers or global state libraries.
-- **API proxying**: in development, Vite proxies `/yt-api` → YouTrack and `/openai-api` → OpenAI. In production, nginx handles the same routes. The Anthropic API is called directly from the browser (no proxy) using the `anthropic-dangerous-direct-browser-access` header.
-- **localStorage keys**: `bitacora-yt-token`, `bitacora-anthropic-key`, `bitacora-openai-key`, `bitacora-ai-usage`, `bitacora-openai-usage`, `bitacora-theme`.
-- **Theming**: CSS-only via `:root` (dark default) and `[data-theme="light"]` selectors in `index.css`. No JS theme library.
+- **Backend:** Express.js serves the React SPA and all API routes. SQLite via better-sqlite3 + Drizzle ORM.
+- **Auth:** Session-based with bcrypt passwords, httpOnly cookies (7-day TTL), connect-sqlite3 session store.
+- **Credential security:** API keys encrypted with AES-256-GCM at rest. The Express server decrypts and injects them into proxied API calls — the browser never sees raw keys.
+- **Frontend:** React 19 + Vite 8. CSS-only theming (no Tailwind). All state in custom hooks, no context providers or state libraries.
+- **Deploy:** Docker Compose with a persistent volume for the SQLite DB. Caddy for auto-TLS reverse proxy.
+
+## Deploy
+
+See [DEPLOY_VPS.md](DEPLOY_VPS.md) for the full VPS deployment guide.
+
+```bash
+# First deploy
+./scripts/run-bitacora.sh
+
+# Subsequent updates
+./scripts/restart-bitacora.sh
+```
 
 ## Testing
 
@@ -141,18 +187,22 @@ package.json
 # Unit tests
 npm test
 
-# E2E tests (against a real YouTrack instance)
-YOUTRACK_E2E=1 YOUTRACK_TOKEN=your-token npm test
+# Auth flow (see TESTING_AUTH.md for full checklist)
+npm run build && npm start
+# → http://localhost:8080
 ```
+
+See [TESTING_AUTH.md](TESTING_AUTH.md) for the complete auth testing plan.
 
 ## Tech Stack
 
-- **React 19** + **Vite 8** — Frontend
-- **Anthropic Claude API** (claude-sonnet-4-20250514) — AI ticket generation
-- **OpenAI Admin API** — Optional cross-platform usage tracking
-- **YouTrack REST API** — Issue management
-- **nginx** — Production reverse proxy
-- **Docker** — Containerized deployment
+- **React 19** + **Vite 8** — frontend
+- **Express 5** + **better-sqlite3** + **Drizzle ORM** — backend
+- **Anthropic Claude API** — AI ticket generation
+- **OpenAI Admin API** — usage tracking
+- **YouTrack REST API** — issue management
+- **Docker Compose** — containerized deployment
+- **Caddy** — auto-TLS reverse proxy
 
 ## Authors
 
