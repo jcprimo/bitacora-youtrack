@@ -14,7 +14,7 @@
     "preview": "vite preview",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "prepare": "git config core.hooksPath .git/hooks && cp scripts/scan-secrets.sh .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit",
+    "prepare": "test -d .git && git config core.hooksPath .git/hooks && cp scripts/scan-secrets.sh .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit || true",
     "security:scan": "bash scripts/scan-secrets.sh"
   },
   "dependencies": {

@@ -2,7 +2,7 @@
 FROM node:22-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN npm ci --ignore-scripts
 COPY . .
 RUN npm run build
 
@@ -12,7 +12,7 @@ WORKDIR /app
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/server ./server
 COPY --from=build /app/package.json /app/package-lock.json ./
-RUN npm ci --omit=dev
+RUN npm ci --omit=dev --ignore-scripts
 RUN mkdir -p /app/data
 
 # Run as non-root user to limit container compromise blast radius
