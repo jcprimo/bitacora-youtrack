@@ -47,7 +47,8 @@ sleep 3
 if docker compose ps --format '{{.Status}}' | grep -q "Up"; then
   echo ""
   echo "──────────────────────────────────────────────"
-  echo "  ✓ Bitacora restarted successfully"
+  echo "  ✓ Bitacora restarted"
+  echo "  → https://dashboard.bitacora.cloud"
   echo "──────────────────────────────────────────────"
   echo ""
   # Show last 5 log lines to confirm healthy startup

@@ -77,8 +77,12 @@ sleep 3
 if docker compose ps --format '{{.Status}}' | grep -q "Up"; then
   echo ""
   echo "──────────────────────────────────────────────"
-  echo "  ✓ Bitacora is running on port 8080"
+  echo "  ✓ Bitacora is running"
   echo "──────────────────────────────────────────────"
+  echo ""
+  echo "  Local:        http://localhost:8080"
+  echo "  Production:   https://dashboard.bitacora.cloud"
+  echo "                (requires Caddy — see DEPLOY_VPS.md)"
   echo ""
   echo "  View logs:    docker compose logs -f app"
   echo "  Check status: docker compose ps"
