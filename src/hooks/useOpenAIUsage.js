@@ -20,8 +20,13 @@ import {
 } from "../openai";
 
 export function useOpenAIUsage() {
-  const openaiKey = localStorage.getItem("bitacora-openai-key") || import.meta.env.VITE_OPENAI_KEY || "";
-  const hasOpenAIKey = openaiKey.length > 0;
+  // In production (Express proxy), the key is stored server-side in the DB.
+  // We check localStorage/env for dev mode compatibility, but also assume
+  // the key exists if we're on the Express server (port !== 5173).
+  const localKey = localStorage.getItem("bitacora-openai-key") || import.meta.env.VITE_OPENAI_KEY || "";
+  const isExpressProxy = window.location.port !== "5173";
+  const openaiKey = localKey;
+  const hasOpenAIKey = localKey.length > 0 || isExpressProxy;
 
   const [usageTab, setUsageTab] = useState("anthropic");
 
@@ -37,8 +42,10 @@ export function useOpenAIUsage() {
   const [openaiDateRange, setOpenaiDateRange] = useState(getMonthRange);
 
   const loadOpenaiUsage = useCallback(async () => {
-    if (!openaiKey) return;
-    if (!isAdminKey(openaiKey)) {
+    if (!hasOpenAIKey) return;
+    // In Express proxy mode, the key is server-side so we can't check prefix.
+    // Only validate in dev mode where we have the key locally.
+    if (!isExpressProxy && openaiKey && !isAdminKey(openaiKey)) {
       setOpenaiError("OpenAI Usage API requires an Admin key (sk-admin-*). Standard project keys (sk-proj-*) don't have access.");
       return;
     }
@@ -47,7 +54,9 @@ export function useOpenAIUsage() {
     try {
       const startUnix = toUnix(openaiDateRange.startDate);
       const endUnix = toUnix(openaiDateRange.endDate);
-      const costBuckets = await fetchCosts(openaiKey, startUnix, endUnix);
+      // In Express proxy mode, pass null — server injects the key
+      const keyForRequest = isExpressProxy ? null : openaiKey;
+      const costBuckets = await fetchCosts(keyForRequest, startUnix, endUnix);
 
       const dailyBreakdown = computeDailyBreakdown(costBuckets);
       const { totals: modelTotals, grandTotal } = computeModelTotals(dailyBreakdown);

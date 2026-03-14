@@ -26,9 +26,12 @@ export function useCreateTicket(token, showToast, loadIssues) {
   const [aiError, setAiError] = useState(null);
   const [actionLoading, setActionLoading] = useState(null);
 
-  // Resolve API key: localStorage (runtime setting) → env var → empty
-  const anthropicKey = localStorage.getItem("bitacora-anthropic-key") || import.meta.env.VITE_ANTHROPIC_KEY || "";
-  const hasAIKey = anthropicKey.length > 0;
+  // Resolve API key: localStorage (runtime setting) → env var → empty.
+  // In Express proxy mode, the key is stored server-side in the DB.
+  const localAnthropicKey = localStorage.getItem("bitacora-anthropic-key") || import.meta.env.VITE_ANTHROPIC_KEY || "";
+  const isExpressProxy = window.location.port !== "5173";
+  const anthropicKey = localAnthropicKey;
+  const hasAIKey = localAnthropicKey.length > 0 || isExpressProxy;
 
   const resetCreate = () => {
     setRawInput("");
@@ -46,14 +49,24 @@ export function useCreateTicket(token, showToast, loadIssues) {
     setIsGenerating(true);
     setAiError(null);
     try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
+      // In Express proxy mode, call /api/anthropic/messages (server injects key).
+      // In dev mode, call Anthropic directly with the local key.
+      const apiUrl = isExpressProxy
+        ? "/api/anthropic/messages"
+        : "https://api.anthropic.com/v1/messages";
+
+      const apiHeaders = isExpressProxy
+        ? { "Content-Type": "application/json" }
+        : {
+            "Content-Type": "application/json",
+            "anthropic-dangerous-direct-browser-access": "true",
+            "x-api-key": anthropicKey,
+            "anthropic-version": "2023-06-01",
+          };
+
+      const res = await fetch(apiUrl, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "anthropic-dangerous-direct-browser-access": "true",
-          "x-api-key": anthropicKey,
-          "anthropic-version": "2023-06-01",
-        },
+        headers: apiHeaders,
         body: JSON.stringify({
           model: "claude-sonnet-4-20250514",
           max_tokens: 1200,

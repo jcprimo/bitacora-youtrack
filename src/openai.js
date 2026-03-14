@@ -3,7 +3,10 @@
 // Requires an Admin API key (sk-admin-*) — standard project keys won't work.
 // Create one at: https://platform.openai.com/settings/organization/admin-keys
 
-export const OPENAI_BASE = "/openai-api";
+// In production (Express on :8080), the server proxies /api/openai/* → OpenAI
+// and injects the auth token server-side. In dev (Vite on :5173), the Vite
+// proxy handles /openai-api/*.
+export const OPENAI_BASE = window.location.port === "5173" ? "/openai-api" : "/api/openai";
 
 // ─── Console links ──────────────────────────────────────────────
 export const OPENAI_USAGE_URL = "https://platform.openai.com/usage";
@@ -11,10 +14,11 @@ export const OPENAI_BILLING_URL = "https://platform.openai.com/settings/organiza
 export const OPENAI_ADMIN_KEYS_URL = "https://platform.openai.com/settings/organization/admin-keys";
 
 function headers(key) {
-  return {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${key}`,
-  };
+  // When using Express proxy, the server injects Authorization server-side.
+  // We still send it in dev mode for the Vite proxy passthrough.
+  const h = { "Content-Type": "application/json" };
+  if (key) h.Authorization = `Bearer ${key}`;
+  return h;
 }
 
 // ─── Key type detection ─────────────────────────────────────────

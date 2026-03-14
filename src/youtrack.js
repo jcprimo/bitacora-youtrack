@@ -3,17 +3,23 @@
 // Uses Vite dev proxy (/yt-api → https://bitacora.youtrack.cloud/api)
 
 export const config = {
-  base: "/yt-api",
+  // In production (Express on :8080), the server proxies /api/yt/* → YouTrack
+  // and injects the auth token server-side. In dev (Vite on :5173), the Vite
+  // proxy handles /yt-api/*. We detect which to use based on the port.
+  base: window.location.port === "5173" ? "/yt-api" : "/api/yt",
   projectId: "0-1",
   projectShort: "BIT",
 };
 
 function headers(token) {
-  return {
+  // When using the Express proxy, the server injects the Authorization header.
+  // We still send it for Vite dev mode where there's no server-side injection.
+  const h = {
     "Content-Type": "application/json",
     Accept: "application/json",
-    Authorization: `Bearer ${token}`,
   };
+  if (token) h.Authorization = `Bearer ${token}`;
+  return h;
 }
 
 // ─── Bitacora Custom Fields Reference ────────────────────────────
