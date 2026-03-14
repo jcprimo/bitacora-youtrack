@@ -1713,6 +1713,150 @@
   font-style: italic;
 }
 
+/* ─── Detail Comments ──────────────────────────────────────────── */
+.detail-comments {
+  margin-top: 1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+
+.detail-comments-header {
+  padding: 0.75rem 1.25rem;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.detail-comments-title {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+
+.detail-comments-loading,
+.detail-comments-empty {
+  padding: 1.25rem;
+  text-align: center;
+  font-size: 0.72rem;
+  color: var(--text-dim);
+}
+
+.detail-comments-loading .spinner {
+  margin-right: 0.4rem;
+}
+
+.detail-comments-list {
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.detail-comment {
+  padding: 0.75rem 1.25rem;
+  border-bottom: 1px solid var(--border-subtle);
+  transition: background 0.15s ease;
+}
+
+.detail-comment:last-child {
+  border-bottom: none;
+}
+
+.detail-comment:hover {
+  background: rgba(124, 106, 255, 0.03);
+}
+
+.detail-comment-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.3rem;
+}
+
+.detail-comment-author {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--accent-indigo);
+}
+
+.detail-comment-time {
+  font-size: 0.6rem;
+  color: var(--text-dim);
+}
+
+.detail-comment-text {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.detail-comment-input-row {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem 0.25rem;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.detail-comment-textarea {
+  flex: 1;
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 0.5rem 0.75rem;
+  font-size: 0.78rem;
+  color: var(--text-primary);
+  resize: vertical;
+  min-height: 2.4rem;
+  max-height: 8rem;
+  line-height: 1.5;
+  transition: border-color 0.2s ease;
+}
+
+.detail-comment-textarea:focus {
+  outline: none;
+  border-color: var(--accent-indigo);
+}
+
+.detail-comment-textarea::placeholder {
+  color: var(--text-dim);
+}
+
+.detail-comment-submit {
+  align-self: flex-end;
+  padding: 0.45rem 1rem;
+  background: rgba(124, 106, 255, 0.12);
+  border: 1px solid rgba(124, 106, 255, 0.4);
+  border-radius: var(--radius-sm);
+  color: var(--accent-indigo);
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.detail-comment-submit:hover:not(:disabled) {
+  background: rgba(124, 106, 255, 0.2);
+  border-color: rgba(124, 106, 255, 0.6);
+}
+
+.detail-comment-submit:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.detail-comment-hint {
+  padding: 0 1.25rem 0.6rem;
+  font-size: 0.55rem;
+  color: var(--text-dim);
+  text-align: right;
+}
+
 /* ─── Responsive ───────────────────────────────────────────────── */
 @media (max-width: 768px) {
   .app-shell { padding: 1rem; }

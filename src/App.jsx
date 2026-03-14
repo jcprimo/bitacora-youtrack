@@ -274,6 +274,9 @@ export default function App() {
           handleDelete={detail.handleDelete}
           setView={setView}
           showToast={showToast}
+          comments={detail.comments}
+          commentsLoading={detail.commentsLoading}
+          postComment={detail.postComment}
         />
       )}
 
