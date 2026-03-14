@@ -4,12 +4,26 @@ import bcrypt from "bcryptjs";
 import { db } from "../db.js";
 import { users } from "../schema.js";
 import { eq, count } from "drizzle-orm";
+import { rateLimit } from "../middleware/rateLimiter.js";
 
 const router = Router();
 const SALT_ROUNDS = 12;
 
+// Rate limiters — protects against brute-force attacks
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5,                    // 5 attempts per window
+  message: "Too many login attempts. Please try again in 15 minutes.",
+});
+
+const registerLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 3,                    // 3 registrations per hour per IP
+  message: "Too many registration attempts. Please try again later.",
+});
+
 // POST /api/auth/login
-router.post("/login", async (req, res) => {
+router.post("/login", loginLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) {
@@ -75,7 +89,7 @@ router.get("/me", (req, res) => {
 
 // POST /api/auth/register — create user
 // First user becomes admin automatically. After that, admin-only.
-router.post("/register", async (req, res) => {
+router.post("/register", registerLimiter, async (req, res) => {
   try {
     const { email, password, name } = req.body;
     if (!email || !password) {

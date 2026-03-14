@@ -24,6 +24,25 @@ import qaRoutes from "./routes/qa.js";
 import proxyRoutes from "./routes/proxy.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+const isProduction = process.env.NODE_ENV === "production";
+
+// ─── Production env validation (fail-fast) ──────────────────────
+if (isProduction) {
+  const missing = [];
+  if (!process.env.SESSION_SECRET || process.env.SESSION_SECRET === "bitacora-dev-secret-change-in-production") {
+    missing.push("SESSION_SECRET (must be a strong random string, not the default)");
+  }
+  if (!process.env.ENCRYPTION_KEY || process.env.ENCRYPTION_KEY.length !== 64) {
+    missing.push("ENCRYPTION_KEY (must be a 64-char hex string — generate with: node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\")");
+  }
+  if (missing.length > 0) {
+    console.error("🚨 MATUTE — Production security check FAILED:");
+    missing.forEach((m) => console.error(`   ✗ ${m}`));
+    console.error("\n   Server cannot start with insecure defaults in production.");
+    process.exit(1);
+  }
+}
+
 const app = express();
 const PORT = process.env.PORT || 8080;
 

@@ -13,7 +13,9 @@
     "test": "node --test",
     "preview": "vite preview",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate"
+    "db:migrate": "drizzle-kit migrate",
+    "prepare": "git config core.hooksPath .git/hooks && cp scripts/scan-secrets.sh .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit",
+    "security:scan": "bash scripts/scan-secrets.sh"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
