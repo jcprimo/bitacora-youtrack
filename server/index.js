@@ -46,6 +46,16 @@ if (isProduction) {
 const app = express();
 const PORT = process.env.PORT || 8080;
 
+// ─── Trust reverse proxy (Caddy) ────────────────────────────────
+// Caddy proxies HTTPS → HTTP to Express on localhost:8080.
+// Without this, Express sees all connections as HTTP and refuses to
+// set Secure cookies (which require HTTPS). Setting trust proxy = 1
+// tells Express to read Caddy's X-Forwarded-Proto header, so it
+// knows the original connection was HTTPS.
+if (isProduction) {
+  app.set("trust proxy", 1);
+}
+
 // ─── Run migrations (create tables) ─────────────────────────────
 function runMigrations() {
   sqlite.exec(`
