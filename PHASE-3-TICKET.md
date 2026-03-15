@@ -300,42 +300,137 @@ Review Queue → Diff View → Approve → Create PR → Merge to master
 
 ---
 
-## Decision Points
+## Decisions Made
 
-### Path A: Claude Code CLI in Containers
-- **Pros:** Battle-tested, full Claude Code capabilities (file editing, bash, etc.), simple to containerize
-- **Cons:** Requires Claude Max subscription or API key per concurrent session, CLI output parsing needed, heavier containers (~500MB+)
-- **Cost:** ~$0.05-0.50 per agent job (depends on task complexity and model)
+### Infrastructure: Split Architecture (VPS + Mac Mini)
 
-### Path B: Claude Agent SDK (Programmatic)
-- **Pros:** Lighter weight, structured JSON responses, finer control over tool use, cheaper per call
-- **Cons:** Less autonomous (you define the tools), more code to write, no built-in file editing
-- **Cost:** Direct API pricing ($3/$15 per MTok for Sonnet, more for Opus)
+**Dashboard** stays on the Hostinger KVM2 VPS. **Agents** run on a local Mac Mini.
 
-### Path C: Hybrid (Recommended)
-- **Baal & iOS** → Claude Code CLI in containers (they need full file editing + bash)
-- **QA Testing** → Claude Code CLI + Playwright test server (needs to write tests AND run them)
-- **PM, Security, etc.** → Inline API calls (already working in Create tab)
+#### Why split?
 
-### Critical Questions Before Starting
+| | Hostinger KVM2 (VPS) | Mac Mini M4 (local) |
+|---|---|---|
+| **Specs** | 2 vCPU, 8 GB RAM, 100 GB NVMe | 10-core CPU, 16 GB RAM, 256 GB |
+| **Purpose** | Serve dashboard + API | Run agent containers |
+| **iOS Simulator** | Impossible (Linux) | Native macOS support |
+| **Cost** | ~$10-13/month (prepaid yearly) | $599 one-time + ~$2/month electricity |
+| **Network** | Public IP, Caddy TLS | Local network, connects to VPS API |
 
-1. **Compute budget:** Your Hostinger VPS — how much RAM/CPU does it have? Each Claude Code container needs ~512MB RAM. Running 3 in parallel = ~1.5GB just for agents. The QA container with Playwright needs more (~1GB for headless Chromium).
+The VPS can't run iOS Simulator (Linux) and would be tight on RAM with 3 agents + Playwright + dashboard. The Mac Mini solves both: 16 GB RAM, macOS for XCUITest, and after 6 months it's cheaper than any cloud alternative.
 
-2. **API costs:** Are you on Claude Max ($100/mo unlimited) or pay-per-use API? Three concurrent agents on pay-per-use could cost $5-50/day depending on task complexity.
+#### Cost Comparison (8 hrs/day, 3 agents)
 
-3. **QA test targets:** Does the QA agent test against production URLs, a staging environment, or locally spun-up instances? If staging, do you have separate staging deployments for `bitacora-viewer` and `bitacora-app`?
+| Option | Monthly Cost | Year 1 | Year 2+ |
+|--------|-------------|--------|---------|
+| **Mac Mini + Claude Max** | $100 (Claude Max) + $2 (electricity) | $599 + $1,224 = **$1,823** | **$1,224/yr** |
+| **Mac Mini + Pay-per-use API** | $150-1,500 (variable) | $599 + $1,800-$18,000 | Same |
+| **Cloud GPU (AWS/GCP)** | $200-800/month | $2,400-$9,600 | Same |
+| **VPS only (no iOS testing)** | $10-13 (hosting) + $100 (Claude Max) | $1,356 | **$1,344/yr** |
 
-4. **iOS testing depth:** Should QA run XCUITest on an iOS Simulator (requires macOS, not possible on Linux VPS) or stick to API-level testing + Playwright for the web viewer? A macOS CI runner (GitHub Actions, etc.) may be needed for real iOS testing.
+**Recommendation:** Mac Mini M4 ($599) + Claude Max ($100/month). Pays for itself in ~3 months vs cloud alternatives. Unlimited agent usage. Native iOS testing.
 
-5. **Review bottleneck:** If 3 agents produce PRs simultaneously, who reviews? Is auto-merge acceptable for low-risk changes (QA test plans, docs), with manual review only for code changes?
+#### How the split works
 
-6. **Failure handling:** When an agent fails mid-task (API timeout, bad output), should it auto-retry with the same prompt, retry with a modified prompt, or just fail and notify?
+```
+┌─────────────────────────────────────────┐
+│  Hostinger KVM2 (VPS)                    │
+│  dashboard.bitacora.cloud                │
+│                                          │
+│  ├── Caddy (TLS)                         │
+│  ├── Express (dashboard + API)           │
+│  ├── SQLite (jobs, logs, credentials)    │
+│  └── WebSocket hub (log streaming)       │
+└─────────────────┬───────────────────────┘
+                  │ HTTPS API
+                  │ (job dispatch, status updates,
+                  │  log streaming, result upload)
+┌─────────────────▼───────────────────────┐
+│  Mac Mini (local)                        │
+│  Agent execution engine                  │
+│                                          │
+│  ├── Agent runner daemon                 │
+│  │   polls VPS for queued jobs           │
+│  │                                       │
+│  ├── Docker containers                   │
+│  │   ├── Baal (full-stack)               │
+│  │   ├── iOS Sr. Dev (Swift)             │
+│  │   └── QA (Playwright + Simulator)     │
+│  │                                       │
+│  ├── Git worktrees (per job)             │
+│  ├── iOS Simulator (for QA)              │
+│  └── agent-shared repo (mounted)         │
+└─────────────────────────────────────────┘
+```
 
-7. **Shared state:** If Baal modifies `App.jsx` and iOS agent modifies Swift files at the same time, they won't conflict (different repos). But if both Baal jobs target the same repo (`dashboard` + `viewer`), the orchestrator should serialize or detect conflicts.
+The Mac Mini runs an **agent runner daemon** that:
+1. Polls the VPS API for jobs in `queued` status
+2. Creates git worktrees locally
+3. Spawns Docker containers for each agent
+4. Streams stdout back to the VPS via WebSocket
+5. Pushes branches to GitHub when done
+6. Reports results back to the VPS API
 
-8. **Agent memory:** Should agents have access to the lessons_learned memory and SKILLS.md? This means mounting the agent-shared repo into each container.
+### API Plan: Claude Max ($100/month)
 
-9. **`student-reports-ios` rename timeline:** When will this rename to `bitacora-app`? The orchestrator needs to know the correct repo name for worktree creation and PR targeting.
+At 8 hours/day with 3 concurrent agents, pay-per-use would cost $150-1,500/month. Claude Max at $100/month is the clear choice:
+- Unlimited Claude Code CLI usage
+- No per-token cost anxiety
+- Predictable monthly budget
+- All three agents can run simultaneously
+
+### Failure Handling: Fail + Notify PM
+
+When an agent fails (API timeout, bad output, build error):
+1. Job status → `failed` in DB
+2. Error logs captured in `agent_logs` table
+3. PM agent notified automatically
+4. PM sends Slack notification to Primo via webhook
+5. No auto-retry — human reviews the failure first
+
+Requires:
+- Slack webhook URL configured in `.env`
+- PM agent has a "notify" capability (simple webhook POST)
+- Dashboard shows failed jobs prominently with error logs
+
+### Agent Memory: `agent-shared` repo
+
+New repo `agent-shared` mounted into every agent container:
+
+```
+agent-shared/
+├── SKILLS.md              # Agent definitions + conventions
+├── lessons/
+│   ├── express5.md        # Express 5 pitfalls
+│   ├── docker.md          # Docker/deployment lessons
+│   └── ...
+├── prompts/
+│   ├── baal.md            # Baal system prompt + context
+│   ├── ios.md             # iOS agent prompt
+│   ├── qa.md              # QA agent prompt
+│   └── pm.md              # PM agent prompt
+├── conventions/
+│   ├── git.md             # Branch naming, master, commit style
+│   ├── code-standards.md  # Button types, CSS vars, etc.
+│   └── testing.md         # Test expectations per repo
+└── context/
+    └── platform.md        # Bitacora platform overview, repos, compliance
+```
+
+Mounted as read-only volume: `-v /path/to/agent-shared:/agent-shared:ro`
+
+### Remaining Open Questions
+
+1. **QA test targets:** Does QA test against production URLs, a staging environment, or locally spun-up instances? If staging, do you have separate staging deployments for `bitacora-viewer` and `bitacora-app`?
+
+2. **Review bottleneck:** If 3 agents produce PRs simultaneously, who reviews? Is auto-merge acceptable for low-risk changes (QA test plans, docs), with manual review only for code changes?
+
+3. **Shared state:** If two Baal jobs target the same repo (`dashboard` + `viewer`), the orchestrator should serialize or detect conflicts. Acceptable?
+
+4. **`student-reports-ios` rename timeline:** When will this rename to `bitacora-app`? The orchestrator needs the correct repo name.
+
+5. **Slack workspace:** Do you have a Slack workspace with an incoming webhook URL, or do we need to set that up?
+
+6. **Mac Mini purchase timeline:** When are you planning to get the Mac Mini? We can start building the orchestrator on the VPS (steps 1-8) and add the Mac Mini agent runner later.
 
 ---
 
@@ -354,24 +449,50 @@ Drizzle ORM makes this a config change, not a rewrite.
 
 ## Suggested Implementation Order
 
-| Step | What | Effort | Depends On |
-|------|------|--------|------------|
-| 1 | `server/worktree.js` — git worktree create/cleanup, multi-repo | S | — |
-| 2 | `agents/Dockerfile.claude` — Claude Code container | S | — |
-| 3 | `server/orchestrator.js` — spawn + collect | M | 1, 2 |
-| 4 | `server/routes/jobs.js` — CRUD + dispatch API with repo selector | M | 3 |
-| 5 | `server/ws.js` — WebSocket log streaming | M | 3 |
-| 6 | `src/views/AgentsView.jsx` — control panel + terminal | M | 4, 5 |
-| 7 | `src/components/DiffViewer.jsx` — result diff view | M | 6 |
-| 8 | `src/components/ReviewModal.jsx` — approve → PR to `master` | M | 7 |
-| 9 | Cost controls + timeouts | S | 4 |
-| 10 | `agents/Dockerfile.qa` — QA container with Playwright | M | 2 |
-| 11 | `server/qa-runner.js` — test execution + result collection | L | 10, 3 |
-| 12 | `src/components/QAResultsPanel.jsx` — pass/fail + screenshots | M | 11, 6 |
-| 13 | Post-deploy smoke tests (triggered by restart script) | S | 11 |
-| 14 | Scheduling (cron) — nightly regression | S | 11 |
-| 15 | Multi-repo support (dashboard, app, viewer) | M | 3 |
-| 16 | Agent-shared repo integration | S | 15 |
-| 17 | Rename `student-reports-ios` → `bitacora-app` | S | — |
+### Phase 3A — VPS: Job API + Dashboard UI (no Mac Mini needed yet)
 
-Steps 1-8 form the MVP (agents + review). Steps 10-14 add QA test execution. Steps 15-17 complete multi-repo support.
+| Step | What | Where | Effort |
+|------|------|-------|--------|
+| 1 | `server/routes/jobs.js` — CRUD + dispatch API with repo selector | VPS | M |
+| 2 | `server/ws.js` — WebSocket log streaming | VPS | M |
+| 3 | `src/views/AgentsView.jsx` — control panel + live terminal | VPS | M |
+| 4 | `src/components/DiffViewer.jsx` — result diff view | VPS | M |
+| 5 | `src/components/ReviewModal.jsx` — approve → PR to `master` | VPS | M |
+| 6 | Slack notification on failure (PM → webhook) | VPS | S |
+
+### Phase 3B — Mac Mini: Agent Runner + Containers
+
+| Step | What | Where | Effort |
+|------|------|-------|--------|
+| 7 | Mac Mini setup (Docker, git, Claude Code CLI) | Mac Mini | S |
+| 8 | Agent runner daemon (polls VPS API for queued jobs) | Mac Mini | M |
+| 9 | `agents/Dockerfile.claude` — Claude Code container | Mac Mini | S |
+| 10 | Git worktree manager (create/cleanup per job, multi-repo) | Mac Mini | M |
+| 11 | Baal agent — end-to-end test (dispatch → run → PR) | Mac Mini | M |
+| 12 | iOS Sr. Dev agent — Swift worktree + scoped file access | Mac Mini | M |
+| 13 | Cost controls + per-job timeouts | Both | S |
+
+### Phase 3C — QA Test Server
+
+| Step | What | Where | Effort |
+|------|------|-------|--------|
+| 14 | `agents/Dockerfile.qa` — QA container with Playwright | Mac Mini | M |
+| 15 | QA test runner (execute tests, collect results, screenshots) | Mac Mini | L |
+| 16 | `src/components/QAResultsPanel.jsx` — pass/fail + screenshots | VPS | M |
+| 17 | iOS Simulator integration for XCUITest | Mac Mini | L |
+| 18 | Post-deploy smoke tests (triggered by restart script) | Mac Mini | S |
+| 19 | Scheduling (cron) — nightly regression | Mac Mini | S |
+
+### Phase 3D — Multi-Repo + Shared Config
+
+| Step | What | Where | Effort |
+|------|------|-------|--------|
+| 20 | Create `agent-shared` repo (SKILLS, prompts, conventions) | GitHub | S |
+| 21 | Mount agent-shared into all containers | Mac Mini | S |
+| 22 | Multi-repo support (dashboard, app, viewer) | Both | M |
+| 23 | Rename `student-reports-ios` → `bitacora-app` | GitHub | S |
+
+**Phase 3A** can start immediately (no hardware needed).
+**Phase 3B** requires the Mac Mini.
+**Phase 3C** builds on 3B.
+**Phase 3D** can run in parallel with 3B/3C.
