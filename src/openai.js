@@ -47,7 +47,9 @@ export async function fetchCosts(key, startTime, endTime) {
     const res = await fetch(url.toString(), { headers: headers(key) });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw new Error(err.error?.message || `OpenAI Costs API returned ${res.status}`);
+      // OpenAI returns { error: { message: "..." } } or { error: "string" }
+      const msg = typeof err.error === "string" ? err.error : err.error?.message;
+      throw new Error(msg || `OpenAI Costs API returned ${res.status}`);
     }
     const data = await res.json();
     allBuckets = allBuckets.concat(data.data || []);
