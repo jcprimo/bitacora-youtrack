@@ -17,6 +17,7 @@ Markets: US K-12 + Mexico escuelas.
 IMPORTANT: Respond ONLY with a valid JSON object. No markdown fencing, no explanation.`;
 
 export const PROMPTS = {
+  baal: `${CONTEXT}\nYou are Baal, the Full Stack Engineer. You handle frontend (React 19 + Vite), backend (Express 5 + SQLite/Drizzle), infrastructure (Docker, Caddy), and API integrations (YouTrack, OpenAI, Anthropic). Generate a YouTrack ticket:\n{"summary":"title under 80 chars","description":"## Task\\n[what to build/fix]\\n\\n## Frontend\\n- React component/hook/view changes\\n- CSS (no Tailwind — use CSS variables + :root)\\n- Responsive: must work at 393px (iPhone 16)\\n\\n## Backend\\n- Express route/middleware changes\\n- SQLite schema changes (Drizzle ORM)\\n- Proxy/API integration\\n\\n## Infrastructure\\n- Docker/Compose changes\\n- Environment variables\\n- VPS deploy steps\\n\\n## Done When\\n- [ ] Build passes (npm run build)\\n- [ ] Tested locally on :8080\\n- [ ] Tested on production (dashboard.bitacora.cloud)\\n- [ ] Mobile responsive verified\\n- [ ] Committed with descriptive message","priority":"Normal","ferpa_risk":false,"lfpdppp_risk":false,"estimated_effort":"M"}`,
   pm: `${CONTEXT}\nYou are the PM Agent. Generate a YouTrack ticket:\n{"summary":"title under 80 chars","description":"## User Story\\nAs a [teacher|principal|admin],\\nI want to [action],\\nSo that [outcome].\\n\\n## Acceptance Criteria\\n- [ ] criterion 1\\n- [ ] criterion 2\\n\\n## Bilingual Impact\\n[EN/ES considerations]\\n\\n## Compliance\\n**FERPA:** [Yes/No]\\n**LFPDPPP:** [Yes/No]","priority":"Normal","ferpa_risk":false,"lfpdppp_risk":false,"estimated_effort":"M"}`,
   ios: `${CONTEXT}\nYou are the iOS Senior Developer Agent. Generate a YouTrack ticket:\n{"summary":"title under 80 chars","description":"## Task\\n[what to build/fix]\\n\\n## Technical Requirements\\n- Swift/SwiftUI details\\n- Architecture (MVVM)\\n- Data layer (Core Data, API)\\n\\n## Done When\\n- [ ] Code reviewed\\n- [ ] XCTests passing\\n- [ ] Localization (EN+ES)\\n- [ ] Accessibility verified\\n\\n## Compliance\\n**FERPA:** [Yes/No]\\n**LFPDPPP:** [Yes/No]","priority":"Normal","ferpa_risk":false,"lfpdppp_risk":false,"estimated_effort":"M"}`,
   ux: `${CONTEXT}\nYou are the UX/UI Agent. Generate a YouTrack ticket:\n{"summary":"title under 80 chars","description":"## Design Task\\n**Persona:** [Teacher|Principal|Admin]\\n**Device:** [iPhone|iPad|Both]\\n\\n**Problem:**\\n[pain point]\\n\\n**Deliverables:**\\n- [ ] Wireframe\\n- [ ] Hi-fi (Light+Dark)\\n- [ ] Component spec\\n- [ ] Bilingual layout review (ES ~30% longer)\\n\\n**Accessibility:** WCAG 2.1 AA, VoiceOver, Dynamic Type\\n\\n## Compliance\\n**FERPA:** [Yes/No]\\n**LFPDPPP:** [Yes/No]","priority":"Normal","ferpa_risk":false,"lfpdppp_risk":false,"estimated_effort":"M"}`,
@@ -30,6 +31,7 @@ export const PROMPTS = {
 // Returns agent-specific placeholder text for the Create view textarea
 export function getPlaceholder(id) {
   const p = {
+    baal: "Describe a full-stack task — frontend, backend, infra, or all three...\n\nEx: \"Add WebSocket live streaming for agent job output to the dashboard\"",
     pm: "Describe a feature need, priority decision, or user story...\n\nEx: \"Teachers need to log behavior incidents with severity and photo attachments\"",
     ios: "Describe a feature to build or bug to fix...\n\nEx: \"Build incident report form: severity picker, student selector, notes, photo\"",
     ux: "Describe a design need or usability issue...\n\nEx: \"Design the incident creation flow for iPhone — fast, one-handed\"",
@@ -47,6 +49,10 @@ export function getPlaceholder(id) {
 // Each template mirrors the structure of the corresponding AI prompt.
 export function getTemplates(input) {
   return {
+    baal: {
+      summary: input.length > 80 ? input.slice(0, 77) + "..." : input,
+      description: `## Task\n${input}\n\n## Frontend\n- [ ] React component/hook/view: [specify]\n- [ ] CSS changes: [specify]\n- [ ] Responsive at 393px: [verify]\n\n## Backend\n- [ ] Express route/middleware: [specify]\n- [ ] SQLite/Drizzle schema: [specify]\n- [ ] Proxy/API integration: [specify]\n\n## Infrastructure\n- [ ] Docker/Compose: [changes needed?]\n- [ ] Environment variables: [new vars?]\n- [ ] VPS deploy: [special steps?]\n\n## Done When\n- [ ] \`npm run build\` passes\n- [ ] Tested locally on :8080\n- [ ] Tested on dashboard.bitacora.cloud\n- [ ] Mobile responsive verified\n- [ ] Committed with descriptive message\n\n## Compliance\n**FERPA:** [Yes/No]\n**LFPDPPP:** [Yes/No]`,
+    },
     pm: {
       summary: input.length > 80 ? input.slice(0, 77) + "..." : input,
       description: `## User Story\nAs a [teacher | principal | admin],\nI want to ${input},\nSo that [define the outcome].\n\n## Acceptance Criteria\n- [ ] [Define criterion 1]\n- [ ] [Define criterion 2]\n- [ ] [Define criterion 3]\n\n## Bilingual Impact\n[Does this need EN/ES support?]\n\n## Compliance\n**FERPA:** [Yes/No — explain]\n**LFPDPPP:** [Yes/No — explain]\n\n## Notes\n${input}`,

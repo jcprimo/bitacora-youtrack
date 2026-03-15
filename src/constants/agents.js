@@ -7,6 +7,7 @@
 // getPlaceholder, and getTemplates (all in prompts.js).
 
 export const AGENTS = [
+  { id: "baal", label: "Baal — Full Stack", icon: "⚡", color: "#22d3ee", defaultPriority: "Normal", desc: "Full-stack engineering (React + Express + SQLite)" },
   { id: "pm", label: "PM Agent", icon: "🧠", color: "#7c6aff", defaultPriority: "Normal", desc: "Strategy & orchestration" },
   { id: "ios", label: "iOS Sr. Developer", icon: "📱", color: "#34d399", defaultPriority: "Normal", desc: "Swift/SwiftUI engineering" },
   { id: "ux", label: "UX/UI Agent", icon: "🎨", color: "#ec4899", defaultPriority: "Normal", desc: "Design & accessibility" },
