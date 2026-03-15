@@ -2201,7 +2201,89 @@
 .board-filter-bar {
   display: flex;
   gap: 0.75rem;
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+/* ─── Board pill filters ─────────────────────────────────────── */
+.board-pills {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 0.75rem;
+  padding: 0.6rem 0.85rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  backdrop-filter: var(--glass-blur-sm);
+  -webkit-backdrop-filter: var(--glass-blur-sm);
+}
+
+.board-pill-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.board-pill-label {
+  font-size: 0.6rem;
+  font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  min-width: 52px;
+}
+
+.board-pill-group {
+  display: flex;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+}
+
+.board-pill {
+  font-size: 0.6rem;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  padding: 0.2rem 0.5rem;
+  border-radius: 12px;
+  border: 1px solid var(--border-subtle);
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.board-pill:hover {
+  border-color: var(--border-medium);
+  color: var(--text-secondary);
+}
+
+.board-pill-active {
+  font-weight: 700;
+}
+
+.board-pill-clear {
+  color: var(--accent-red);
+  border-color: rgba(248, 113, 113, 0.3);
+  font-size: 0.58rem;
+}
+
+.board-pill-clear:hover {
+  background: rgba(248, 113, 113, 0.08);
+  border-color: rgba(248, 113, 113, 0.5);
+}
+
+/* ─── Board issue count ──────────────────────────────────────── */
+.board-count {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  margin-bottom: 0.6rem;
+  font-weight: 500;
+}
+
+.board-count-hidden {
+  color: var(--text-dim);
 }
 
 /* ─── Nav tabs (shared by main nav + usage sub-tabs) ──────────── */
@@ -2486,6 +2568,11 @@
     gap: 0.5rem;
   }
   .board-filter-bar .btn { width: 100%; }
+
+  /* Board pills */
+  .board-pills { padding: 0.5rem 0.65rem; }
+  .board-pill-label { min-width: unset; font-size: 0.55rem; }
+  .board-pill { font-size: 0.55rem; padding: 0.2rem 0.4rem; min-height: 28px; }
 
   /* Board issue cards */
   .board-filter-bar + div .panel {

@@ -1,39 +1,168 @@
 // ─── views/BoardView.jsx — Issue List & Filter ──────────────────
 // Displays all Bitacora issues in a vertical list. Each card shows
 // the issue ID, summary, Stage/Priority badges, and last updated time.
-// Supports free-text YouTrack query filtering (e.g. "priority: Critical").
+// Supports free-text YouTrack query filtering and client-side pill
+// filters for Stage and Priority. "Done" tickets are hidden by default
+// with a toggle to reveal them.
 // Click a card → opens DetailView. Stage dropdown allows inline updates.
 
-import { getCustomFieldValue, formatDate, STAGES } from "../youtrack";
+import { useState, useMemo } from "react";
+import { getCustomFieldValue, formatDate, STAGES, PRIORITIES } from "../youtrack";
 import { priorityColor, stageColor } from "../utils/colors";
 
 export default function BoardView({ issues, loading, filterQuery, setFilterQuery, loadIssues, openDetail, changeField }) {
+  // ─── Client-side filters ───────────────────────────────────────
+  const [stageFilter, setStageFilter] = useState("All");
+  const [priorityFilter, setPriorityFilter] = useState("All");
+  const [hideDone, setHideDone] = useState(true);
+
+  // Count done tickets for the indicator
+  const doneCount = useMemo(
+    () => issues.filter((i) => getCustomFieldValue(i, "Stage") === "Done").length,
+    [issues]
+  );
+
+  // Apply client-side filters
+  const filteredIssues = useMemo(() => {
+    return issues.filter((issue) => {
+      const stage = getCustomFieldValue(issue, "Stage");
+      const priority = getCustomFieldValue(issue, "Priority");
+
+      if (hideDone && stage === "Done") return false;
+      if (stageFilter !== "All" && stage !== stageFilter) return false;
+      if (priorityFilter !== "All" && priority !== priorityFilter) return false;
+
+      return true;
+    });
+  }, [issues, stageFilter, priorityFilter, hideDone]);
+
+  const activeFilterCount =
+    (stageFilter !== "All" ? 1 : 0) +
+    (priorityFilter !== "All" ? 1 : 0);
+
   return (
     <div className="animate-fade">
+      {/* Search bar */}
       <div className="board-filter-bar">
         <input
           className="config-input"
           style={{ flex: 1, fontSize: "0.78rem", padding: "0.55rem 0.85rem", borderRadius: "var(--radius-md)" }}
-          placeholder="Filter Bitacora: priority: Critical  or  Stage: Develop  or  free text..."
+          placeholder="Search YouTrack: priority: Critical  or  Stage: Develop  or  free text..."
           value={filterQuery}
           onChange={(e) => setFilterQuery(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && loadIssues()}
         />
-        <button className="btn btn-config" style={{ padding: "0.55rem 1rem", width: "auto" }} onClick={loadIssues}>
+        <button type="button" className="btn btn-config" style={{ padding: "0.55rem 1rem", width: "auto" }} onClick={loadIssues}>
           Search
         </button>
       </div>
 
+      {/* Pill filters */}
+      <div className="board-pills">
+        {/* Stage filter */}
+        <div className="board-pill-row">
+          <span className="board-pill-label">Stage</span>
+          <div className="board-pill-group">
+            {["All", ...STAGES].map((s) => {
+              const isActive = s === stageFilter;
+              const color = s === "All" ? "var(--text-secondary)" : stageColor(s);
+              return (
+                <button
+                  key={s}
+                  type="button"
+                  className={`board-pill ${isActive ? "board-pill-active" : ""}`}
+                  onClick={() => setStageFilter(s)}
+                  style={isActive ? { color, borderColor: color + "60", background: color + "14" } : undefined}
+                >
+                  {s}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Priority filter */}
+        <div className="board-pill-row">
+          <span className="board-pill-label">Priority</span>
+          <div className="board-pill-group">
+            {["All", ...PRIORITIES].map((p) => {
+              const isActive = p === priorityFilter;
+              const color = p === "All" ? "var(--text-secondary)" : priorityColor(p);
+              return (
+                <button
+                  key={p}
+                  type="button"
+                  className={`board-pill ${isActive ? "board-pill-active" : ""}`}
+                  onClick={() => setPriorityFilter(p)}
+                  style={isActive ? { color, borderColor: color + "60", background: color + "14" } : undefined}
+                >
+                  {p}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Done toggle + clear */}
+        <div className="board-pill-row">
+          <button
+            type="button"
+            className={`board-pill ${!hideDone ? "board-pill-active" : ""}`}
+            onClick={() => setHideDone((v) => !v)}
+            style={!hideDone ? { color: stageColor("Done"), borderColor: stageColor("Done") + "60", background: stageColor("Done") + "14" } : undefined}
+          >
+            {hideDone ? `Show Done (${doneCount})` : `Showing Done (${doneCount})`}
+          </button>
+          {activeFilterCount > 0 && (
+            <button
+              type="button"
+              className="board-pill board-pill-clear"
+              onClick={() => { setStageFilter("All"); setPriorityFilter("All"); }}
+            >
+              Clear filters
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Issue count */}
+      <div className="board-count">
+        {filteredIssues.length} of {issues.length} tickets
+        {hideDone && doneCount > 0 && (
+          <span className="board-count-hidden"> · {doneCount} done hidden</span>
+        )}
+      </div>
+
+      {/* Issue list */}
       <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-        {issues.length === 0 && !loading && (
+        {filteredIssues.length === 0 && !loading && (
           <div style={{ textAlign: "center", padding: "3rem", color: "var(--text-dim)" }}>
-            <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>📭</div>
-            <div style={{ fontSize: "0.82rem" }}>No issues in Bitacora</div>
-            <div style={{ fontSize: "0.7rem", marginTop: "0.25rem" }}>Create your first ticket to get started</div>
+            <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>
+              {issues.length > 0 ? "🔍" : "📭"}
+            </div>
+            <div style={{ fontSize: "0.82rem" }}>
+              {issues.length > 0 ? "No tickets match the current filters" : "No issues in Bitacora"}
+            </div>
+            {issues.length > 0 && (
+              <button
+                type="button"
+                onClick={() => { setStageFilter("All"); setPriorityFilter("All"); setHideDone(false); }}
+                style={{
+                  marginTop: "0.75rem", background: "none", border: "1px solid var(--border-subtle)",
+                  borderRadius: "var(--radius-sm)", color: "var(--accent-indigo)", fontSize: "0.72rem",
+                  fontWeight: 600, padding: "0.4rem 0.85rem", cursor: "pointer", fontFamily: "var(--font-sans)",
+                }}
+              >
+                Clear all filters
+              </button>
+            )}
+            {issues.length === 0 && (
+              <div style={{ fontSize: "0.7rem", marginTop: "0.25rem" }}>Create your first ticket to get started</div>
+            )}
           </div>
         )}
 
-        {issues.map((issue) => {
+        {filteredIssues.map((issue) => {
           const priority = getCustomFieldValue(issue, "Priority");
           const stage = getCustomFieldValue(issue, "Stage");
           return (
